@@ -6,7 +6,11 @@ from collections import deque
 
 from parser import parse_html
 
-from utils import normalize_url, is_internal_url
+from utils import (
+    normalize_url,
+    is_internal_url,
+    get_domain
+)
 
 
 class SEOCrawler:
@@ -15,7 +19,7 @@ class SEOCrawler:
 
         self.start_url = start_url
 
-        self.domain = start_url
+        self.domain = get_domain(start_url)
 
         self.max_pages = max_pages
 
@@ -42,7 +46,10 @@ class SEOCrawler:
 
                 self.visited.add(url)
 
-                if "text/html" not in response.headers.get("Content-Type", ""):
+                if "text/html" not in response.headers.get(
+                    "Content-Type",
+                    ""
+                ):
                     continue
 
                 seo_data = parse_html(url, response.text)
@@ -59,13 +66,21 @@ class SEOCrawler:
 
                     href = link.get("href")
 
-                    if href:
+                    if not href:
+                        continue
 
-                        full_url = normalize_url(url, href)
+                    full_url = normalize_url(url, href)
 
-                        if is_internal_url(full_url, self.domain):
+                    if (
+                        is_internal_url(full_url, self.domain)
+                        and full_url not in self.visited
+                        and "#" not in full_url
+                        and "mailto:" not in full_url
+                    ):
 
-                            self.queue.append((full_url, depth + 1))
+                        self.queue.append(
+                            (full_url, depth + 1)
+                        )
 
             except Exception as e:
 
